@@ -7,36 +7,36 @@
 -- Make sure to add role to the server for servers to have access to other servers or clients in ec2 service .. 
 
 Install nomad on it :
-
-sudo apt-get update &&   sudo apt-get install wget gpg coreutils
-    5  wget -O- https://apt.releases.hashicorp.com/gpg |   sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-    6  echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-    7  sudo apt-get update && sudo apt-get install nomad
-    8  nomad version
-    9  nomad -h
-      cd /etc/nomad.d/
-      ls
-
+```bash
+sudo apt-get update && sudo apt-get install wget gpg coreutils
+wget -O- https://apt.releases.hashicorp.com/gpg |   sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+sudo apt-get update && sudo apt-get install nomad
+nomad version
+nomad -h
+cd /etc/nomad.d/
+ls
+```
 -- delete the default .hcl file and replace it with basic-server.hcl config file ..
    -- inside the file make changes for ur local ip address of server , bootstrap_expect = 2 (or wtever no of servers wl b thr in cluster ) , tag value changes , etc ....
-
+```bash
 sudo rm -rf nomad.hcl
-   18  vi basic-server.hcl
-   19  sudo vi basic-server.hcl
-   20  ls
-       sudo systemctl start nomad 
-       sudo systemctl status nomad 
-     nomad server members 
-
+vi basic-server.hcl
+sudo vi basic-server.hcl
+ls
+sudo systemctl start nomad 
+sudo systemctl status nomad 
+nomad server members 
+```
 ====================
 
 NOMAD SERVER CLUSTERING :
 
 -- create more ec2 instances with tags key=nomad_cluster_id value=us-east-1 , and role attached ,, also add the basic-server.hcl file(do the same cofig changes like in the frst one ) 
       and than restart the nomad service 
-    
+```bash    
 nomad server members
-
+```
 -- as confirmed with above command now u ll be having ue server cluster setup doen :
 
 ubuntu@ip-172-31-33-162:/etc/nomad.d$ nomad server members
@@ -57,20 +57,21 @@ Now go ahead and create clients-agent nodes named : nomad-agent-clienta , nomad-
 
 follow prev steps with Basic-client. hcl like before ..
 
+```bash
 sudo apt-get update &&   sudo apt-get install wget gpg coreutils
-    2  wget -O- https://apt.releases.hashicorp.com/gpg |   sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-    3  echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-    4  sudo apt-get update && sudo apt-get install nomad
-    5  cd /etc/nomad.d/
-    6  ls
-    7  sudo rm -rf nomad.hcl 
-    8  vi basic-client.hcl
-    9  sudo vi basic-client.hcl
-   10  sudo systemctl start nomad 
-   11  ls
-   12  nomad server members
-   13  nomad node status
-
+wget -O- https://apt.releases.hashicorp.com/gpg |   sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+sudo apt-get update && sudo apt-get install nomad
+cd /etc/nomad.d/
+ls
+sudo rm -rf nomad.hcl 
+vi basic-client.hcl
+sudo vi basic-client.hcl
+sudo systemctl start nomad 
+ls
+nomad server members
+nomad node status
+```
 --- install docker as well on client nodes 
 
    https://docs.docker.com/engine/install/ubuntu/
@@ -83,6 +84,7 @@ ubuntu@ip-172-31-47-80:/etc/nomad.d$ nomad server members
 Name                   Address        Port  Status  Leader  Raft Version  Build  Datacenter  Region
 nomad_server_a.global  172.31.15.165  4648  alive   false   3             1.9.0  dc1         global
 nomad_server_b.global  172.31.33.162  4648  alive   true    3             1.9.0  dc1         global
+
 ubuntu@ip-172-31-47-80:/etc/nomad.d$ nomad node status
 ID        Node Pool  DC   Name            Class   Drain  Eligibility  Status
 6a678df3  default    dc1  nomad_client_a  <none>  false  eligible     ready
@@ -129,6 +131,7 @@ tetris.nomad :
 
 
 ubuntu@ip-172-31-15-165:~$ cat tetris.nomad 
+```hcl
 job "tetris" {
   datacenters = ["dc1", "dc2"]
 
@@ -155,22 +158,22 @@ job "tetris" {
     }
   }
 }
+```
 
 
 
-
----  pwd
-   13  vi tetris.nomad
-   14  nomad
-   15  nomad fmt
-   17  cat tetris.nomad 
-
-
-   24  vi tetris.nomad 
-   25  nomad job run tetris.nomad 
-   26  nomad job status 
-       nomad job status tetris
-
+---
+``` bash
+pwd
+vi tetris.nomad
+nomad
+nomad fmt
+cat tetris.nomad 
+vi tetris.nomad 
+nomad job run tetris.nomad 
+nomad job status 
+nomad job status tetris
+```
 
 
 surf one of the tasks : http://54.233.4.142:24097/
@@ -187,6 +190,8 @@ by default , its binpack .. to chnge it to spread  :
 
 
 ubuntu@ip-172-31-15-165:~$ cat tetris.nomad 
+
+```hcl
 job "tetris" {
   datacenters = ["dc1"]
 
@@ -218,10 +223,12 @@ job "tetris" {
   }
 }
 
-
-   80  nomad job plan tetris.nomad 
-   81  nomad job run tetris.nomad 
-
+```
+---
+```bash
+nomad job plan tetris.nomad 
+nomad job run tetris.nomad 
+```
 
 
 
@@ -247,6 +254,7 @@ platform.aws.placement.availability-zone
 
 
 ubuntu@ip-172-31-15-165:~$ cat tetris.nomad 
+```hcl
 job "tetris" {
   datacenters = ["dc1", "dc2"]
 
@@ -285,7 +293,7 @@ job "tetris" {
 }
 
 
-
+```
  nomad job plan tetris.nomad 
   102  nomad job run tetris.nomad 
 
@@ -303,6 +311,7 @@ Using costraints :
 
 --in first client clienta , update the meta stanza :
 
+```hcl
  meta {
     team = "it-ops"
     env= "prod1"
@@ -310,7 +319,7 @@ Using costraints :
     hardware="cisco"
     instructor="raman"
   }
-
+```
 
 sudo systemctl restart nomad
 
@@ -318,7 +327,7 @@ sudo systemctl restart nomad
 
 --- in second client clientb , update the meta stanza :
 
-
+```hcl
  meta {
     team = "it-ops"
     env= "prod2"
@@ -326,7 +335,7 @@ sudo systemctl restart nomad
     hardware="cisco"
     instructor="raman"
   }
-
+```
 
 sudo systemctl restart nomad
 
@@ -335,6 +344,7 @@ sudo systemctl restart nomad
 
 
 ubuntu@ip-172-31-15-165:~$ cat tetris.nomad 
+```hcl
 job "tetris" {
   datacenters = ["dc1", "dc2"]
 
@@ -367,19 +377,19 @@ job "tetris" {
   }
 }
 
-
+```
 
 nomad job run tetris.nomad 
 
 
 --- now remove all tasks and try with env=prod2 or any other constraint :
 
-
+```hcl
  constraint {
       attribute= "${meta.instructor}"
       value="raman"
      }
-
+```
 
 
 
