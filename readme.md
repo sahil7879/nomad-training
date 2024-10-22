@@ -5,7 +5,7 @@
 -- make sure to provide tags : 
    key=nomad_cluster_id value=us-east-1
 -- Make sure to add role to the server for servers to have access to other servers or clients in ec2 service .. 
-
+### installing nomad ###
 Install nomad on it :
 ```bash
 sudo apt-get update && sudo apt-get install wget gpg coreutils
@@ -30,7 +30,7 @@ nomad server members
 ```
 ====================
 
-NOMAD SERVER CLUSTERING :
+### NOMAD SERVER CLUSTERING : ###
 
 -- create more ec2 instances with tags key=nomad_cluster_id value=us-east-1 , and role attached ,, also add the basic-server.hcl file(do the same cofig changes like in the frst one ) 
       and than restart the nomad service 
@@ -47,7 +47,7 @@ nomad_server_b.global  172.31.33.162  4648  alive   true    3             1.9.0 
 
 ========================
 
-CLIENT-AGENT SETUP :
+### CLIENT-AGENT SETUP : ###
 
 
 
@@ -124,7 +124,8 @@ nomad agent-info
 
 =====================================================
 
----  Demo - Create a Job Specification :
+--- 
+### Demo - Create a Job Specification : ###
 
 
 tetris.nomad :    
@@ -304,7 +305,7 @@ job "tetris" {
 ================================================================
 
 
-Using costraints :
+### Using costraints : ###
 
 
 --- add meta values in the client configurations in all clients :
@@ -394,7 +395,7 @@ nomad job run tetris.nomad
 ---
 
 
-Networking :
+### Networking : ###
 
 --by default nomad has host type mode , to change it to bridge we have to download cni plugins on our clients :
 
@@ -510,7 +511,8 @@ job "tetris" {
 ==================
 
 
----Volumes :
+---
+### Volumes :  ###
 
 on both clients :
 sudo mkdir /etc/nomad.d/volumes/scores01
