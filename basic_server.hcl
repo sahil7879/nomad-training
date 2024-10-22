@@ -47,7 +47,7 @@ server {
   bootstrap_expect = 2
 
   server_join {
-    retry_join = ["provider=aws tag_key=nomad_cluster_id tag_value=sa-east-1"]
+    retry_join = ["provider=aws tag_key=nomad_cluster_id tag_value=ap-south-1"]
   }
 }
 
