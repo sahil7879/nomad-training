@@ -656,10 +656,307 @@ job "tetris" {
 nomad job plan tetris.nomad 
 nomad job plan tetris.nomad 
 
---check all pods will be deployed now on hostvplumes being persistent 
+--check all pods will be deployed now on host volumes being persistent 
 
 
 =============================================================
+
+## -- NOMAD MONITORING: ##
+
+  -- on wtever node  wnt to monitor /troubleshoot :
+
+sudo systemctl status nomad
+
+journalctl -u nomad    ( shift+G to go to end )
+
+ubuntu@ip-172-31-47-80:~$ curl http://localhost:4646/v1/metrics | jq
+
+cat /etc/nomad.d/raman.log
+
+
+=======================================
+
+## --Monitoring app logs : ##
+
+ -- go to client lets say clienta to see the logs of our app :
+
+
+
+
+
+sudo cat /etc/nomad.d/raman.log 
+   85  clear
+   86  ls
+   87  cd /etc/nomad.d/
+   88  ls
+   89  cd data/
+   94  sudo -i
+ 1  cd /etc/nomad.d/
+    2  ls
+    3  cd data/
+    4  ls
+    5  cd alloc/
+    6  ls
+    7  nomad job status
+    8  nomad job status tetris
+    9  nomad node status
+   10  ls
+   11  cd 454e46e1-3799-f787-9ede-e44b88787200/
+   12  ls
+   13  cd alloc/
+   14  ls
+   15  cd logs/
+   16  ls
+   17  cat tetris.stdout.0 
+   18  ls
+   19  cat tetris.stderr.0 
+
+
+============================================
+
+
+## NOMAD UPGRADE CLUSTER : ##
+
+
+https://releases.hashicorp.com/nomad/
+
+
+
+ nomad version
+  289  sudo systemctl stop nomad
+  290  cd /tmp/
+  291  ls
+  292  wget https://releases.hashicorp.com/nomad/1.9.1/nomad_1.9.1_linux_amd64.zip
+  293  ls
+  294  unzip nomad_1.9.1_linux_amd64.zip 
+  295  sudo apt install unzip
+  296  unzip nomad_1.9.1_linux_amd64.zip 
+  297  ls
+  298  which nomad
+  299  ls /usr/bin/nomad
+  300  rm -rf  /usr/bin/nomad
+  301  sudo rm -rf  /usr/bin/nomad
+  302  nomad
+  303  ls
+  304  mv nomad /usr/bin/
+  305  sudo mv nomad /usr/bin/
+  306  nomad
+  307  nomad version
+  308  sudo systemctl start nomad
+  309  nomad server members
+  310  nomad node status
+
+
+==========================================================
+
+
+## NOMAD ACLs : ##
+
+
+-- go to server nodes to implement acl :
+
+  -- sudo vi /etc/nomad.d/basic-server.hcl 
+
+
+
+ubuntu@ip-172-31-15-165:~$ sudo cat /etc/nomad.d/basic-server.hcl 
+```hcl
+# Basic Starter Configuration Used for Nomad Course Demonstrations
+# This is NOT a Secure Complete Nomad Server Configuration
+
+name = "nomad_server_a"
+
+# Directory to store agent state
+data_dir = "/etc/nomad.d/data"
+
+# Address the Nomad agent should bing to for networking
+# 0.0.0.0 is the default and results in using the default private network interface
+# Any configurations under the addresses parameter will take precedence over this value
+bind_addr = "0.0.0.0"
+
+advertise {
+  # Defaults to the first private IP address.
+  http = "172.31.15.165" # must be reachable by Nomad CLI clients
+  rpc  = "172.31.15.165" # must be reachable by Nomad client nodes
+  serf = "172.31.15.165" # must be reachable by Nomad server nodes
+}
+
+ports {
+  http = 4646
+  rpc  = 4647
+  serf = 4648
+}
+
+# TLS configurations
+tls {
+  http = false
+  rpc  = false
+
+  ca_file   = "/etc/certs/ca.crt"
+  cert_file = "/etc/certs/nomad.crt"
+  key_file  = "/etc/certs/nomad.key"
+}
+
+# Specify the datacenter the agent is a member of
+datacenter = "dc1"
+
+# Logging Configurations
+log_level = "INFO"
+log_file  = "/etc/nomad.d/raman.log"
+
+# Server & Raft configuration
+server {
+  enabled          = true
+  bootstrap_expect = 2 
+
+  server_join {
+    retry_join = ["provider=aws tag_key=nomad_cluster_id tag_value=sa-east-1"]
+  }
+}
+
+# Client Configuration - Node can be Server & Client
+client {
+  enabled = false
+}
+
+
+acl {
+  enabled=true
+   }
+
+```
+
+
+  
+
+
+
+
+-- restart nomad service 
+
+nomad status
+
+
+
+
+
+ubuntu@ip-172-31-15-165:~$ nomad status
+Error querying jobs: Unexpected response code: 403 (Permission denied)
+
+
+
+ubuntu@ip-172-31-15-165:~$ nomad acl bootstrap
+Accessor ID  = e2370171-b60e-36d9-60f2-f49f86012db0
+Secret ID    = cd990dc2-0584-dbfa-d0b0-0d645579fbf3
+Name         = Bootstrap Token
+Type         = management
+Global       = true
+
+
+
+
+
+--- SecretId is our bootsptrap token ... (save it somewhere )
+
+
+-- save the bootstrap token as an ebv variable ...
+
+ubuntu@ip-172-31-15-165:~$ export NOMAD_TOKEN=cd990dc2-0584-dbfa-d0b0-0d645579fbf3
+
+
+ubuntu@ip-172-31-15-165:~$ nomad status
+ID      Type     Priority  Status   Submit Date
+tetris  service  50        running  2024-10-21T13:12:25Z
+
+
+
+ubuntu@ip-172-31-15-165:~$ unset NOMAD_TOKEN
+ubuntu@ip-172-31-15-165:~$ nomad status
+Error querying jobs: Unexpected response code: 403 (Permission denied)
+
+
+
+
+
+
+=========================
+
+
+-- ABOVE WAS  a management /bootstrap token having full access , to create a client toke with restrictive policy , below is an example for that :
+
+
+
+-- Step 1: Create a Policy File
+
+
+```hcl
+namespace "default" {
+  capabilities = ["submit-job", "read-logs", "alloc-exec", "scale-job"]
+}
+
+node {
+  policy = "write"
+}
+
+
+
+namespace "web-app" {
+  capabilities = ["submit-job", "read-logs", "alloc-exec", "scale-job"]
+}
+
+```
+
+
+
+
+
+
+
+
+--  Step 2: Create the Policy in Nomad
+
+```bash
+ nomad acl policy apply restricted-policy restricted-policy.hcl
+```
+Successfully wrote "restricted-policy" ACL policy!
+
+
+-- Step3 : Create a token that uses the policy:
+
+
+```bash
+nomad acl token create -name="restricted-client-token" -policy="restricted-policy"
+```
+Accessor ID  = 55a4fc96-3da7-b71a-50aa-aa5bc4c937cd
+Secret ID    = 3e04823b-db05-362d-94cc-f290ec3d1eed
+Name         = restricted-client-token
+Type         = client
+Global       = false
+Create Time  = 2024-10-22 10:12:32.588016686 +0000 UTC
+Expiry Time  = <none>
+Create Index = 1661
+Modify Index = 1661
+Policies     = [restricted-policy]
+
+
+
+
+--- to verify :
+
+```bash
+export NOMAD_TOKEN=3e04823b-db05-362d-94cc-f290ec3d1eed
+```
+
+
+Step 1: Verify Permissions with Commands
+The current policy grants the following capabilities:
+
+submit-job, read-logs, alloc-exec, and scale-job in both default and web-app namespaces.
+Write access to nodes.
+
+
+
+===========================================================================
 
 
 
